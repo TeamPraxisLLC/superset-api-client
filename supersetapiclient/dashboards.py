@@ -2,8 +2,12 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from supersetapiclient.base import Object, ObjectFactories, default_string, json_field
+from supersetapiclient.base import Object, ObjectFactories, default_string, json_field, raise_for_status
 
+@dataclass
+class DashboardEmbed(Object):
+    allowed_domains: List[str] = field(default_factory=list)
+    uuid:str = None
 
 @dataclass
 class Dashboard(Object):
@@ -21,6 +25,8 @@ class Dashboard(Object):
     css: str = default_string()
     changed_on: str = default_string()
     charts: List[str] = field(default_factory=list)
+    tags: List[object] = field(default_factory=list)
+    roles: List[object] = field(default_factory=list)
 
     @property
     def colors(self) -> dict:
@@ -46,6 +52,22 @@ class Dashboard(Object):
             charts.append(c)
         return charts
 
+    def get_embed(self) -> DashboardEmbed:
+        """Get the dashboard's embedded configuration"""
+        client = self._parent.client
+        url = client.join_urls(self.base_url,"embedded")
+        response = client.get(url)
+        if response.status_code == 404:
+            return None
+        return DashboardEmbed().from_json(response.json().get("result"))
+
+    def create_embed(self, allowed_domains: List[str]) -> DashboardEmbed:
+        """Set a dashboard's embedded configuration"""
+        client = self._parent.client
+        url = client.join_urls(self.base_url,"embedded")
+        response = client.post(url, json={ "allowed_domains": allowed_domains })
+        raise_for_status(response)
+        return DashboardEmbed().from_json(response.json().get("result"))
 
 class Dashboards(ObjectFactories):
     endpoint = "dashboard/"
