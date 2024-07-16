@@ -69,6 +69,12 @@ class Dashboard(Object):
         raise_for_status(response)
         return DashboardEmbed().from_json(response.json().get("result"))
 
+    def save(self) -> None:
+        """Override save to fix roles array."""
+        if self.roles and len(self.roles) > 0 and isinstance(self.roles[0], dict):
+            self.roles = list(map(lambda x: x["id"], self.roles))
+        return super().save()
+
 class Dashboards(ObjectFactories):
     endpoint = "dashboard/"
     base_object = Dashboard
